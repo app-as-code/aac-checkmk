@@ -1,0 +1,90 @@
+service:
+  name: aac-checkmk
+  image_repo: checkmk/check-mk-raw
+  image_tag: 2.4.0-daily
+  description: IT‑Monitoring Platform
+  icon: checkmk.png
+  category: Monitoring
+  stage: prod
+  hostname: monitoring
+ports:
+- name: web
+  port: 5000
+  external_port: 8285
+  protocol: TCP
+- name: livestatus
+  port: 5001
+  external_port: 8286
+  protocol: TCP
+- name: event-console
+  port: 8000
+  external_port: 8012
+  protocol: TCP
+config:
+  domain_name: example.com
+  generate_hostname: false
+  integrations:
+    homepage:
+      enabled: true
+    autodns:
+      enabled: true
+    traefik:
+      enabled: true
+      cert_resolver: ionos
+      entrypoint: websecure
+  schema_version: 2
+stage_overrides:
+  prod:
+    service:
+      hostname: monitoring
+    config:
+      generate_hostname: false
+secrets:
+  CMK_PASSWORD: CHANGE_ME
+volumes:
+  sites:
+    description: Checkmk site data and configurations
+  local_time:
+    type: bind
+    source: /etc/localtime
+deployment_strategy:
+  main:
+    enabled: true
+    target_stage: prod
+  dev:
+    enabled: true
+    target_stage: dev
+  test:
+    enabled: false
+    target_stage: test
+  ansible-dev:
+    enabled: true
+    target_stage: dev
+  iac-dev:
+    enabled: true
+    target_stage: dev
+  template-dev:
+    enabled: true
+    target_stage: dev
+deployments:
+  docker_compose:
+    restart_policy: unless-stopped
+    host_base_path: /export/docker
+    volumes:
+    - local_time:/etc/localtime
+    - sites:/omd/sites
+    tmpfs:
+    - /opt/omd/sites/cmk_feser/tmp:uid=1000,gid=1000
+    environment:
+      PUID: '{{ vars.PUID }}'
+      OMD_SITE_ID: '{{ vars.OMD_SITE_ID }}'
+      TZ: '{{ vars.TZ }}'
+      PGID: '{{ vars.PGID }}'
+      CMK_SITE_NAME: '{{ vars.CMK_SITE_NAME }}'
+      CMK_PASSWORD: '{{ secrets.CMK_PASSWORD }}'
+vars:
+  PUID: '1000'
+  OMD_SITE_ID: cmk
+  TZ: Europe/Berlin
+  PGID: '1000'
+  CMK_SITE_NAME: Feser-Monitoring
